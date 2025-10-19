@@ -20,9 +20,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // Initialize Analytics (only in browser environment)
-let analytics;
 if (typeof window !== 'undefined') {
-    analytics = getAnalytics(app);
+    getAnalytics(app);
 }
 
 export interface Todo {
