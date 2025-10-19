@@ -1,0 +1,237 @@
+.App {
+    text-align: center;
+}
+
+.App-header {
+    background-color: #282c34;
+    padding: 20px;
+    color: white;
+    min-height: 100vh;
+}
+
+.App-header h1 {
+    margin-bottom: 30px;
+    color: #61dafb;
+}
+
+.error-message {
+    background-color: #dc3545;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 20px;
+}
+
+.close-error {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-error:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.loading-state {
+    color: #888;
+    font-style: italic;
+    margin: 50px 0;
+}
+
+.todo-input {
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.todo-input input {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+}
+
+.date-input {
+    min-width: 150px;
+    flex: none !important;
+}
+
+.todo-input button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #61dafb;
+    color: #282c34;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.todo-input button:hover {
+    background-color: #21a0c4;
+}
+
+.edit-section {
+    background-color: #1a1d23;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.edit-section h3 {
+    margin-top: 0;
+    color: #61dafb;
+    margin-bottom: 15px;
+}
+
+.edit-due-date {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.update-btn {
+    padding: 8px 16px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.update-btn:hover {
+    background-color: #218838;
+}
+
+.cancel-btn {
+    padding: 8px 16px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.cancel-btn:hover {
+    background-color: #545b62;
+}
+
+.todo-list {
+    list-style: none;
+    padding: 0;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.todo-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: #3a3f47;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.todo-list li:hover {
+    background-color: #434954;
+}
+
+.todo-list li.selected {
+    border-color: #61dafb;
+    background-color: #2a3a4a;
+}
+
+.todo-list li.completed {
+    background-color: #2d5a2d;
+}
+
+.todo-list li.completed .todo-text {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.todo-list li.overdue {
+    border-color: #dc3545;
+    background-color: #4a2a2a;
+}
+
+.todo-list input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.todo-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.todo-text {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.due-date {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+}
+
+.todo-list li.overdue .due-date {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+.delete-btn {
+    padding: 5px 10px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.delete-btn:hover {
+    background-color: #c82333;
+}
+
+.empty-state {
+    color: #888;
+    font-style: italic;
+    margin-top: 50px;
+}
