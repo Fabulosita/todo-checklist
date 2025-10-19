@@ -1,49 +1,76 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import './App.css'
-
-interface Todo {
-    id: number
-    text: string
-    completed: boolean
-    dueDate?: string
-}
+import {
+    addTodo as firebaseAddTodo,
+    updateTodo as firebaseUpdateTodo,
+    deleteTodo as firebaseDeleteTodo,
+    subscribeTodos,
+    Todo
+} from './firebase-service'
 
 function App() {
     const [todos, setTodos] = useState<Todo[]>([])
     const [inputValue, setInputValue] = useState('')
     const [dueDateValue, setDueDateValue] = useState('')
-    const [selectedTodo, setSelectedTodo] = useState<number | null>(null)
+    const [selectedTodo, setSelectedTodo] = useState<string | null>(null)
     const [editingDueDate, setEditingDueDate] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
-    const addTodo = () => {
+    // Subscribe to Firebase data changes
+    useEffect(() => {
+        const unsubscribe = subscribeTodos((todosFromFirebase) => {
+            setTodos(todosFromFirebase)
+            setLoading(false)
+        })
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe()
+    }, [])
+
+    const addTodo = async () => {
         if (inputValue.trim() !== '') {
-            const newTodo: Todo = {
-                id: Date.now(),
-                text: inputValue,
-                completed: false,
-                dueDate: dueDateValue || undefined
+            try {
+                setError(null)
+                await firebaseAddTodo(inputValue, dueDateValue || undefined)
+                setInputValue('')
+                setDueDateValue('')
+            } catch (error) {
+                setError(error instanceof Error ? error.message : 'Failed to add todo')
             }
-            setTodos([...todos, newTodo])
-            setInputValue('')
-            setDueDateValue('')
         }
     }
 
-    const toggleTodo = (id: number) => {
-        setTodos(todos.map(todo =>
-            todo.id === id ? { ...todo, completed: !todo.completed } : todo
-        ))
-    }
-
-    const deleteTodo = (id: number) => {
-        setTodos(todos.filter(todo => todo.id !== id))
-        if (selectedTodo === id) {
-            setSelectedTodo(null)
-            setEditingDueDate('')
+    const toggleTodo = async (id: string) => {
+        try {
+            setError(null)
+            const todo = todos.find(t => t.id === id)
+            if (todo) {
+                await firebaseUpdateTodo(id, {
+                    text: todo.text,
+                    completed: !todo.completed,
+                    dueDate: todo.dueDate
+                })
+            }
+        } catch (error) {
+            setError(error instanceof Error ? error.message : 'Failed to update todo')
         }
     }
 
-    const selectTodo = (id: number) => {
+    const deleteTodo = async (id: string) => {
+        try {
+            setError(null)
+            await firebaseDeleteTodo(id)
+            if (selectedTodo === id) {
+                setSelectedTodo(null)
+                setEditingDueDate('')
+            }
+        } catch (error) {
+            setError(error instanceof Error ? error.message : 'Failed to delete todo')
+        }
+    }
+
+    const selectTodo = (id: string) => {
         if (selectedTodo === id) {
             // Deselect if clicking the same todo
             setSelectedTodo(null)
@@ -56,15 +83,23 @@ function App() {
         }
     }
 
-    const updateDueDate = () => {
+    const updateDueDate = async () => {
         if (selectedTodo) {
-            setTodos(todos.map(todo =>
-                todo.id === selectedTodo
-                    ? { ...todo, dueDate: editingDueDate || undefined }
-                    : todo
-            ))
-            setSelectedTodo(null)
-            setEditingDueDate('')
+            try {
+                setError(null)
+                const todo = todos.find(t => t.id === selectedTodo)
+                if (todo) {
+                    await firebaseUpdateTodo(selectedTodo, {
+                        text: todo.text,
+                        completed: todo.completed,
+                        dueDate: editingDueDate || undefined
+                    })
+                }
+                setSelectedTodo(null)
+                setEditingDueDate('')
+            } catch (error) {
+                setError(error instanceof Error ? error.message : 'Failed to update due date')
+            }
         }
     }
 
@@ -87,6 +122,16 @@ function App() {
         <div className="App">
             <header className="App-header">
                 <h1>Todo Checklist</h1>
+
+                {error && (
+                    <div className="error-message">
+                        {error}
+                        <button onClick={() => setError(null)} className="close-error">
+                            ×
+                        </button>
+                    </div>
+                )}
+
                 <div className="todo-input">
                     <input
                         type="text"
@@ -94,6 +139,7 @@ function App() {
                         onChange={(e) => setInputValue(e.target.value)}
                         placeholder="Add a new todo..."
                         onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+                        disabled={loading}
                     />
                     <input
                         type="date"
@@ -101,8 +147,11 @@ function App() {
                         onChange={(e) => setDueDateValue(e.target.value)}
                         className="date-input"
                         title="Due date (optional)"
+                        disabled={loading}
                     />
-                    <button onClick={addTodo}>Add</button>
+                    <button onClick={addTodo} disabled={loading}>
+                        {loading ? 'Loading...' : 'Add'}
+                    </button>
                 </div>
 
                 {selectedTodo && (
@@ -131,47 +180,55 @@ function App() {
                     </div>
                 )}
 
-                <ul className="todo-list">
-                    {todos.map(todo => (
-                        <li
-                            key={todo.id}
-                            className={`
-                                ${todo.completed ? 'completed' : ''} 
-                                ${selectedTodo === todo.id ? 'selected' : ''}
-                                ${isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}
-                            `}
-                            onClick={() => selectTodo(todo.id)}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={todo.completed}
-                                onChange={(e) => {
-                                    e.stopPropagation()
-                                    toggleTodo(todo.id)
-                                }}
-                            />
-                            <div className="todo-content">
-                                <span className="todo-text">{todo.text}</span>
-                                {todo.dueDate && (
-                                    <span className="due-date">
-                                        Due: {formatDate(todo.dueDate)}
-                                    </span>
-                                )}
-                            </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    deleteTodo(todo.id)
-                                }}
-                                className="delete-btn"
-                            >
-                                Delete
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-                {todos.length === 0 && (
-                    <p className="empty-state">No todos yet. Add one above!</p>
+                {loading ? (
+                    <div className="loading-state">
+                        <p>Loading your todos...</p>
+                    </div>
+                ) : (
+                    <>
+                        <ul className="todo-list">
+                            {todos.map(todo => (
+                                <li
+                                    key={todo.id}
+                                    className={`
+                                        ${todo.completed ? 'completed' : ''} 
+                                        ${selectedTodo === todo.id ? 'selected' : ''}
+                                        ${isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}
+                                    `}
+                                    onClick={() => selectTodo(todo.id)}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={todo.completed}
+                                        onChange={(e) => {
+                                            e.stopPropagation()
+                                            toggleTodo(todo.id)
+                                        }}
+                                    />
+                                    <div className="todo-content">
+                                        <span className="todo-text">{todo.text}</span>
+                                        {todo.dueDate && (
+                                            <span className="due-date">
+                                                Due: {formatDate(todo.dueDate)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            deleteTodo(todo.id)
+                                        }}
+                                        className="delete-btn"
+                                    >
+                                        Delete
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                        {todos.length === 0 && (
+                            <p className="empty-state">No todos yet. Add one above!</p>
+                        )}
+                    </>
                 )}
             </header>
         </div>
