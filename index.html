@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Checklist</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>My Todo Checklist</h1>
+        
+        <div class="add-item-section">
+            <input type="text" id="newItemInput" placeholder="Enter a new task..." />
+            <button id="addItemBtn">Add Item</button>
+        </div>
+
+        <div class="lists-container">
+            <div class="list-section">
+                <h2>Active Tasks</h2>
+                <ul id="activeList" class="task-list"></ul>
+            </div>
+
+            <div class="list-section">
+                <h2>Completed Tasks</h2>
+                <ul id="completedList" class="task-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
