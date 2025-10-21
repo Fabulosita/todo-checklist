@@ -1,13 +1,18 @@
 import './App.css';
 import { useTodos } from './hooks/useTodos';
 import { useSelectedTodo } from './hooks/useSelectedTodo';
+import { useAuth } from './hooks/useAuth';
 import { ErrorMessage } from './components/ErrorMessage';
 import { TodoInput } from './components/TodoInput';
 import { TodoList } from './components/TodoList';
 import { EditSection } from './components/EditSection';
 import { LoadingState } from './components/LoadingState';
+import { LoginPage } from './components/LoginPage';
+import { Header } from './components/Header';
 
 function App() {
+    const { isLoggedIn, isLoading: authLoading, login, logout } = useAuth();
+
     const {
         todos,
         loading,
@@ -24,6 +29,22 @@ function App() {
         selectTodo,
         clearSelection
     } = useSelectedTodo();
+
+    // Show loading screen while checking authentication
+    if (authLoading) {
+        return (
+            <div className="App">
+                <div className="App-header">
+                    <LoadingState />
+                </div>
+            </div>
+        );
+    }
+
+    // Show login page if not authenticated
+    if (!isLoggedIn) {
+        return <LoginPage onLogin={login} />;
+    }
 
     const handleSelectTodo = (id: string) => {
         selectTodo(id, todos);
@@ -51,16 +72,16 @@ function App() {
 
     return (
         <div className="App">
-            <header className="App-header">
-                <h1>Todo Checklist</h1>
+            <Header onLogout={logout} />
 
-                {error && (
-                    <ErrorMessage
-                        message={error}
-                        onClose={clearError}
-                    />
-                )}
+            {error && (
+                <ErrorMessage
+                    message={error}
+                    onClose={clearError}
+                />
+            )}
 
+            <div className="App-header">
                 <TodoInput
                     onAddTodo={addTodo}
                     loading={loading}
@@ -85,7 +106,7 @@ function App() {
                         onSelectTodo={handleSelectTodo}
                     />
                 )}
-            </header>
+            </div>
         </div>
     );
 }
