@@ -10,10 +10,10 @@ import {
     onSnapshot,
     query,
     orderBy,
-    serverTimestamp,
-    Timestamp
+    serverTimestamp
 } from 'firebase/firestore';
 import { firebaseConfig } from './firebase-config';
+import { Todo } from './types/Todo';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -24,14 +24,8 @@ if (typeof window !== 'undefined') {
     getAnalytics(app);
 }
 
-export interface Todo {
-    id: string;
-    text: string;
-    completed: boolean;
-    dueDate?: string;
-    createdAt: Timestamp;
-    updatedAt: Timestamp;
-}
+// Re-export Todo type for backward compatibility
+export type { Todo };
 
 // Collection reference for todos
 const todosCollection = collection(db, 'todos');
@@ -39,13 +33,19 @@ const todosCollection = collection(db, 'todos');
 // Add a new todo
 export const addTodo = async (text: string, dueDate?: string): Promise<void> => {
     try {
-        await addDoc(todosCollection, {
+        const todoData: any = {
             text: text.trim(),
             completed: false,
-            dueDate: dueDate || null,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
-        });
+        };
+
+        // Only add dueDate if it's provided and not empty
+        if (dueDate && dueDate.trim()) {
+            todoData.dueDate = dueDate.trim();
+        }
+
+        await addDoc(todosCollection, todoData);
     } catch (error) {
         console.error('Error adding todo:', error);
         throw new Error('Failed to add todo. Please try again.');
@@ -56,10 +56,22 @@ export const addTodo = async (text: string, dueDate?: string): Promise<void> => 
 export const updateTodo = async (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt'>>): Promise<void> => {
     try {
         const todoRef = doc(db, 'todos', id);
-        await updateDoc(todoRef, {
+        const updateData: any = {
             ...updates,
             updatedAt: serverTimestamp()
-        });
+        };
+
+        // Handle dueDate - remove field entirely if it's empty
+        if (updates.dueDate !== undefined) {
+            if (updates.dueDate && updates.dueDate.trim()) {
+                updateData.dueDate = updates.dueDate.trim();
+            } else {
+                // Remove the dueDate field entirely
+                updateData.dueDate = null;
+            }
+        }
+
+        await updateDoc(todoRef, updateData);
     } catch (error) {
         console.error('Error updating todo:', error);
         throw new Error('Failed to update todo. Please try again.');
@@ -78,7 +90,10 @@ export const deleteTodo = async (id: string): Promise<void> => {
 };
 
 // Subscribe to todos changes with real-time updates
-export const subscribeTodos = (callback: (todos: Todo[]) => void): (() => void) => {
+export const subscribeTodos = (
+    callback: (todos: Todo[]) => void,
+    errorCallback?: (error: Error) => void
+): (() => void) => {
     // Create a query to order todos by creation date (newest first)
     const q = query(todosCollection, orderBy('createdAt', 'desc'));
 
@@ -100,7 +115,9 @@ export const subscribeTodos = (callback: (todos: Todo[]) => void): (() => void) 
         },
         (error) => {
             console.error('Error fetching todos:', error);
-            // You might want to show a user-friendly error message here
+            if (errorCallback) {
+                errorCallback(new Error('Failed to sync with Firebase'));
+            }
         }
     );
 
