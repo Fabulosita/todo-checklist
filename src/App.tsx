@@ -1,16 +1,20 @@
 import './App.css';
+import { useState } from 'react';
 import { useTodos } from './hooks/useTodos';
 import { useSelectedTodo } from './hooks/useSelectedTodo';
 import { useAuth } from './hooks/useAuth';
 import { ErrorMessage } from './components/ErrorMessage';
 import { TodoInput } from './components/TodoInput';
 import { TodoList } from './components/TodoList';
+import { TaskTableView } from './components/TaskTableView';
+import { ViewSwitcher, ViewMode } from './components/ViewSwitcher';
 import { EditSection } from './components/EditSection';
 import { LoadingState } from './components/LoadingState';
 import { LoginPage } from './components/LoginPage';
 import { Header } from './components/Header';
 
 function App() {
+    const [currentView, setCurrentView] = useState<ViewMode>('list');
     const { isLoggedIn, isLoading: authLoading, login, logout } = useAuth();
 
     const {
@@ -20,6 +24,7 @@ function App() {
         addTodo,
         updateTodo,
         deleteTodo,
+        updateSubItems,
         clearError
     } = useTodos();
 
@@ -95,8 +100,21 @@ function App() {
                     />
                 )}
 
+                <ViewSwitcher
+                    currentView={currentView}
+                    onViewChange={setCurrentView}
+                />
+
                 {loading ? (
                     <LoadingState />
+                ) : currentView === 'table' ? (
+                    <TaskTableView
+                        todos={todos}
+                        onToggleTodo={handleToggleTodo}
+                        onDeleteTodo={handleDeleteTodo}
+                        onSelectTodo={handleSelectTodo}
+                        selectedTodoId={selectedTodoId}
+                    />
                 ) : (
                     <TodoList
                         todos={todos}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Todo, TodoFormData, TodoUpdateData } from '../types/Todo';
+import { Todo, TodoFormData, TodoUpdateData, SubItem } from '../types/Todo';
 import {
     addTodo as firebaseAddTodo,
     updateTodo as firebaseUpdateTodo,
@@ -14,6 +14,7 @@ interface UseTodosReturn {
     addTodo: (todoData: TodoFormData) => Promise<void>;
     updateTodo: (id: string, updates: TodoUpdateData) => Promise<void>;
     deleteTodo: (id: string) => Promise<void>;
+    updateSubItems: (todoId: string, subItems: SubItem[]) => Promise<void>;
     clearError: () => void;
 }
 
@@ -109,6 +110,24 @@ export const useTodos = (): UseTodosReturn => {
         setError(null);
     };
 
+    const updateSubItems = async (todoId: string, subItems: SubItem[]): Promise<void> => {
+        try {
+            console.log('=== useTodos.updateSubItems START ===');
+            console.log('useTodos.updateSubItems called:', { todoId, subItems });
+            console.log('subItems length:', subItems.length);
+            console.log('subItems JSON:', JSON.stringify(subItems, null, 2));
+
+            await updateTodo(todoId, { subItems });
+            console.log('useTodos.updateSubItems completed successfully');
+            console.log('=== useTodos.updateSubItems END ===');
+        } catch (error) {
+            console.error('useTodos.updateSubItems error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update sub-items';
+            setError(errorMessage);
+            throw new Error(errorMessage);
+        }
+    };
+
     return {
         todos,
         loading,
@@ -116,6 +135,7 @@ export const useTodos = (): UseTodosReturn => {
         addTodo,
         updateTodo,
         deleteTodo,
+        updateSubItems,
         clearError,
     };
 };

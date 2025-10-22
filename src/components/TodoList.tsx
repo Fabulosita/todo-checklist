@@ -21,7 +21,7 @@ export const TodoList = ({
     }
 
     return (
-        <ul className="todo-list">
+        <div className="todo-list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {todos.map(todo => (
                 <TodoItem
                     key={todo.id}
@@ -32,6 +32,6 @@ export const TodoList = ({
                     onSelect={onSelectTodo}
                 />
             ))}
-        </ul>
+        </div>
     );
 };
