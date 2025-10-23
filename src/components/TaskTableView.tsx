@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Todo } from '../types/Todo';
 import { formatDate, isOverdue } from '../utils/dateHelpers';
-import { addSubItem } from '../firebase-service';
+import { addSubItem, updateSubItem, deleteSubItem } from '../firebase-service';
+import { SubItemComponent } from './SubItemComponent';
 
 interface TaskTableViewProps {
     todos: Todo[];
@@ -33,6 +34,7 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
     selectedTodoId
 }) => {
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['Current Tasks']);
+    const [expandedTasks, setExpandedTasks] = useState<string[]>([]);
     const [hoveredTask, setHoveredTask] = useState<string | null>(null);
 
     const handleAddSubItem = async (todoId: string) => {
@@ -46,6 +48,52 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                 alert('Failed to add sub-item. Please try again.');
             }
         }
+    };
+
+    const handleToggleSubItem = async (todoId: string, subItemId: string) => {
+        try {
+            const todo = todos.find(t => t.id === todoId);
+            const subItem = todo?.subItems?.find(item => item.id === subItemId);
+            if (subItem) {
+                await updateSubItem(todoId, subItemId, { completed: !subItem.completed });
+            }
+        } catch (error) {
+            console.error('Failed to toggle sub-item:', error);
+        }
+    };
+
+    const handleDeleteSubItem = async (todoId: string, subItemId: string) => {
+        try {
+            await deleteSubItem(todoId, subItemId);
+        } catch (error) {
+            console.error('Failed to delete sub-item:', error);
+        }
+    };
+
+    const handleEditSubItem = async (todoId: string, subItemId: string, newText: string) => {
+        try {
+            await updateSubItem(todoId, subItemId, { text: newText });
+        } catch (error) {
+            console.error('Failed to edit sub-item:', error);
+        }
+    };
+
+    const handleUpdateSubItemDueDate = async (todoId: string, subItemId: string, dueDate: string) => {
+        try {
+            await updateSubItem(todoId, subItemId, { dueDate: dueDate || undefined });
+        } catch (error) {
+            console.error('Failed to update sub-item due date:', error);
+        }
+    };
+
+    const handleTaskClick = (todoId: string) => {
+        onSelectTodo(todoId);
+        // Toggle sub-items visibility when clicking on a task
+        setExpandedTasks(prev =>
+            prev.includes(todoId)
+                ? prev.filter(id => id !== todoId)
+                : [...prev, todoId]
+        );
     };
 
     const getTaskStatus = (todo: Todo) => {
@@ -138,94 +186,119 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                                     const statusInfo = STATUS_TYPES[status as keyof typeof STATUS_TYPES];
                                     const subItemsCount = todo.subItems?.length || 0;
                                     const completedSubItems = todo.subItems?.filter(item => item.completed).length || 0;
+                                    const isTaskExpanded = expandedTasks.includes(todo.id);
 
                                     return (
-                                        <div
-                                            key={todo.id}
-                                            style={{
-                                                ...styles.taskRow,
-                                                ...(selectedTodoId === todo.id ? styles.selectedTaskRow : {}),
-                                                ...(hoveredTask === todo.id ? styles.hoveredTaskRow : {})
-                                            }}
-                                            onClick={() => onSelectTodo(todo.id)}
-                                            onMouseEnter={() => setHoveredTask(todo.id)}
-                                            onMouseLeave={() => setHoveredTask(null)}
-                                        >
-                                            <div style={styles.nameCell}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={todo.completed}
-                                                    onChange={(e) => {
-                                                        e.stopPropagation();
-                                                        onToggleTodo(todo.id);
-                                                    }}
-                                                    style={styles.checkbox}
-                                                />
-                                                <span
-                                                    style={{
-                                                        ...styles.taskText,
-                                                        ...(todo.completed ? styles.completedTaskText : {})
-                                                    }}
-                                                >
-                                                    {todo.text}
-                                                </span>
-                                                {subItemsCount > 0 && (
-                                                    <span style={styles.subItemsBadge}>
-                                                        {completedSubItems}/{subItemsCount} sub-items
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div style={styles.dueDateCell}>
-                                                {todo.dueDate ? (
+                                        <div key={todo.id} style={styles.taskContainer}>
+                                            <div
+                                                style={{
+                                                    ...styles.taskRow,
+                                                    ...(selectedTodoId === todo.id ? styles.selectedTaskRow : {}),
+                                                    ...(hoveredTask === todo.id ? styles.hoveredTaskRow : {})
+                                                }}
+                                                onClick={() => handleTaskClick(todo.id)}
+                                                onMouseEnter={() => setHoveredTask(todo.id)}
+                                                onMouseLeave={() => setHoveredTask(null)}
+                                            >
+                                                <div style={styles.nameCell}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={todo.completed}
+                                                        onChange={(e) => {
+                                                            e.stopPropagation();
+                                                            onToggleTodo(todo.id);
+                                                        }}
+                                                        style={styles.checkbox}
+                                                    />
                                                     <span
                                                         style={{
-                                                            ...styles.dueDate,
-                                                            ...(isOverdue(todo.dueDate) && !todo.completed ? styles.overdueDueDate : {})
+                                                            ...styles.taskText,
+                                                            ...(todo.completed ? styles.completedTaskText : {})
                                                         }}
                                                     >
-                                                        {formatDate(todo.dueDate)}
+                                                        {todo.text}
                                                     </span>
-                                                ) : (
-                                                    <span style={styles.noDueDate}>—</span>
-                                                )}
+                                                    {subItemsCount > 0 && (
+                                                        <span style={styles.subItemsBadge}>
+                                                            {completedSubItems}/{subItemsCount} sub-items
+                                                        </span>
+                                                    )}
+                                                    {subItemsCount > 0 && (
+                                                        <span style={styles.expandIndicator}>
+                                                            {isTaskExpanded ? '▼' : '▶'}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div style={styles.dueDateCell}>
+                                                    {todo.dueDate ? (
+                                                        <span
+                                                            style={{
+                                                                ...styles.dueDate,
+                                                                ...(isOverdue(todo.dueDate) && !todo.completed ? styles.overdueDueDate : {})
+                                                            }}
+                                                        >
+                                                            {formatDate(todo.dueDate)}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={styles.noDueDate}>—</span>
+                                                    )}
+                                                </div>
+
+                                                <div style={styles.statusCell}>
+                                                    <span
+                                                        style={{
+                                                            ...styles.statusBadge,
+                                                            backgroundColor: `${statusInfo.color}20`,
+                                                            color: statusInfo.color,
+                                                            border: `1px solid ${statusInfo.color}40`
+                                                        }}
+                                                    >
+                                                        {statusInfo.icon} {statusInfo.label}
+                                                    </span>
+                                                </div>
+
+                                                <div style={styles.actionsCell}>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleAddSubItem(todo.id);
+                                                        }}
+                                                        style={styles.addSubItemButton}
+                                                        title="Add sub-item"
+                                                    >
+                                                        ➕
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onDeleteTodo(todo.id);
+                                                        }}
+                                                        style={styles.deleteButton}
+                                                        title="Delete task"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            <div style={styles.statusCell}>
-                                                <span
-                                                    style={{
-                                                        ...styles.statusBadge,
-                                                        backgroundColor: `${statusInfo.color}20`,
-                                                        color: statusInfo.color,
-                                                        border: `1px solid ${statusInfo.color}40`
-                                                    }}
-                                                >
-                                                    {statusInfo.icon} {statusInfo.label}
-                                                </span>
-                                            </div>
-
-                                            <div style={styles.actionsCell}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleAddSubItem(todo.id);
-                                                    }}
-                                                    style={styles.addSubItemButton}
-                                                    title="Add sub-item"
-                                                >
-                                                    ➕
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onDeleteTodo(todo.id);
-                                                    }}
-                                                    style={styles.deleteButton}
-                                                    title="Delete task"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
+                                            {isTaskExpanded && subItemsCount > 0 && (
+                                                <div style={styles.subItemsSection}>
+                                                    {todo.subItems?.map(subItem => (
+                                                        <div key={subItem.id} style={styles.subItemRow}>
+                                                            <div style={styles.subItemCell}>
+                                                                <SubItemComponent
+                                                                    subItem={subItem}
+                                                                    onToggle={(subItemId) => handleToggleSubItem(todo.id, subItemId)}
+                                                                    onDelete={(subItemId) => handleDeleteSubItem(todo.id, subItemId)}
+                                                                    onEdit={(subItemId, newText) => handleEditSubItem(todo.id, subItemId, newText)}
+                                                                    onUpdateDueDate={(subItemId, dueDate) => handleUpdateSubItemDueDate(todo.id, subItemId, dueDate)}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -476,5 +549,27 @@ const styles = {
     emptyStateText: {
         color: '#999',
         fontSize: '0.9rem',
+    },
+    taskContainer: {
+        marginBottom: '0',
+    },
+    expandIndicator: {
+        fontSize: '0.8rem',
+        color: '#61dafb',
+        marginLeft: '8px',
+        transition: 'transform 0.2s',
+    },
+    subItemsSection: {
+        backgroundColor: '#1a1d23',
+        borderTop: '1px solid #2a2e35',
+        paddingLeft: '40px',
+    },
+    subItemRow: {
+        borderBottom: '1px solid #2a2e35',
+        padding: '8px 20px 8px 0',
+    },
+    subItemCell: {
+        display: 'flex',
+        alignItems: 'center',
     },
 };
