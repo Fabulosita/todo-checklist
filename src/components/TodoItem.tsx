@@ -37,17 +37,11 @@ export const TodoItem = ({ todo, isSelected, onToggle, onDelete, onSelect }: Tod
 
     const handleAddSubItem = async (text: string, dueDate?: string) => {
         try {
-            console.log('=== handleAddSubItem START ===');
-            console.log('handleAddSubItem called with text:', text, 'dueDate:', dueDate);
-
             await addSubItem(todo.id, text, dueDate);
-            console.log('addSubItem completed successfully');
-
             setIsAddingSubItem(false);
             setShowSubItems(true);
-            console.log('=== handleAddSubItem END ===');
         } catch (error) {
-            console.error('=== handleAddSubItem ERROR ===', error);
+            console.error('Failed to add sub-item:', error);
         }
     };
 
@@ -99,16 +93,6 @@ export const TodoItem = ({ todo, isSelected, onToggle, onDelete, onSelect }: Tod
 
     const subItemsCount = todo.subItems?.length || 0;
     const completedSubItems = todo.subItems?.filter(item => item.completed).length || 0;
-
-    console.log('TodoItem render:', {
-        todoId: todo.id,
-        todoText: todo.text,
-        subItemsCount,
-        showSubItems,
-        isAddingSubItem,
-        hasSubItems: !!todo.subItems,
-        subItemsArray: todo.subItems
-    });
 
     const className = [
         todo.completed ? 'completed' : '',
@@ -181,10 +165,7 @@ export const TodoItem = ({ todo, isSelected, onToggle, onDelete, onSelect }: Tod
             </div>
 
             {showSubItems && (
-                <div style={{ ...styles.subItemsContainer, border: '2px solid red' }} >
-                    <p style={{ color: 'white', fontSize: '12px' }}>
-                        Rendering {todo.subItems?.length || 0} sub-items
-                    </p>
+                <div style={styles.subItemsContainer}>
                     {todo.subItems?.map(subItem => (
                         <SubItemComponent
                             key={subItem.id}
