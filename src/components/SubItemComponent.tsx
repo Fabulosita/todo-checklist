@@ -184,6 +184,7 @@ const styles = {
         flexDirection: 'column' as const,
         gap: '2px',
         minWidth: 0,
+        textAlign: 'left' as const,
     },
     subItemText: {
         fontSize: '0.9rem',
@@ -191,12 +192,14 @@ const styles = {
         cursor: 'pointer',
         wordWrap: 'break-word' as const,
         overflow: 'hidden',
+        textAlign: 'left' as const,
     },
     dueDateText: {
         fontSize: '0.75rem',
         color: '#999',
         cursor: 'pointer',
         fontStyle: 'italic',
+        textAlign: 'left' as const,
     },
     overdueDateText: {
         color: '#ff6b6b',

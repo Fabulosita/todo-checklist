@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Todo } from '../types/Todo';
 import { formatDate, isOverdue } from '../utils/dateHelpers';
 import { addSubItem, updateSubItem, deleteSubItem } from '../firebase-service';
-import { SubItemComponent } from './SubItemComponent';
 
 interface TaskTableViewProps {
     todos: Todo[];
     onToggleTodo: (id: string) => Promise<void>;
     onDeleteTodo: (id: string) => Promise<void>;
     onSelectTodo: (id: string) => void;
+    onUpdateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
     selectedTodoId: string | null;
 }
 
@@ -31,11 +31,14 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
     onToggleTodo,
     onDeleteTodo,
     onSelectTodo,
+    onUpdateTodo,
     selectedTodoId
 }) => {
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['Current Tasks']);
     const [expandedTasks, setExpandedTasks] = useState<string[]>([]);
     const [hoveredTask, setHoveredTask] = useState<string | null>(null);
+    const [editingDueDate, setEditingDueDate] = useState<string | null>(null);
+    const [tempDueDate, setTempDueDate] = useState<string>('');
 
     const handleAddSubItem = async (todoId: string) => {
         const subItemText = prompt('Enter sub-item text:');
@@ -70,22 +73,6 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
         }
     };
 
-    const handleEditSubItem = async (todoId: string, subItemId: string, newText: string) => {
-        try {
-            await updateSubItem(todoId, subItemId, { text: newText });
-        } catch (error) {
-            console.error('Failed to edit sub-item:', error);
-        }
-    };
-
-    const handleUpdateSubItemDueDate = async (todoId: string, subItemId: string, dueDate: string) => {
-        try {
-            await updateSubItem(todoId, subItemId, { dueDate: dueDate || undefined });
-        } catch (error) {
-            console.error('Failed to update sub-item due date:', error);
-        }
-    };
-
     const handleTaskClick = (todoId: string) => {
         onSelectTodo(todoId);
         // Toggle sub-items visibility when clicking on a task
@@ -94,6 +81,57 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                 ? prev.filter(id => id !== todoId)
                 : [...prev, todoId]
         );
+    };
+
+    const handleDueDateClick = (todoId: string, currentDueDate?: string) => {
+        setEditingDueDate(todoId);
+        setTempDueDate(currentDueDate || '');
+    };
+
+    const handleDueDateSave = async (todoId: string) => {
+        try {
+            await onUpdateTodo(todoId, { dueDate: tempDueDate || undefined });
+            setEditingDueDate(null);
+            setTempDueDate('');
+        } catch (error) {
+            console.error('Failed to update due date:', error);
+        }
+    };
+
+    const handleDueDateCancel = () => {
+        setEditingDueDate(null);
+        setTempDueDate('');
+    };
+
+    const handleDueDateKeyPress = (e: React.KeyboardEvent, todoId: string) => {
+        if (e.key === 'Enter') {
+            handleDueDateSave(todoId);
+        } else if (e.key === 'Escape') {
+            handleDueDateCancel();
+        }
+    };
+
+    const handleSubItemDueDateClick = (todoId: string, subItemId: string, currentDueDate?: string) => {
+        setEditingDueDate(`${todoId}-${subItemId}`);
+        setTempDueDate(currentDueDate || '');
+    };
+
+    const handleSubItemDueDateSave = async (todoId: string, subItemId: string) => {
+        try {
+            await updateSubItem(todoId, subItemId, { dueDate: tempDueDate || undefined });
+            setEditingDueDate(null);
+            setTempDueDate('');
+        } catch (error) {
+            console.error('Failed to update sub-item due date:', error);
+        }
+    };
+
+    const handleSubItemDueDateKeyPress = (e: React.KeyboardEvent, todoId: string, subItemId: string) => {
+        if (e.key === 'Enter') {
+            handleSubItemDueDateSave(todoId, subItemId);
+        } else if (e.key === 'Escape') {
+            handleDueDateCancel();
+        }
     };
 
     const getTaskStatus = (todo: Todo) => {
@@ -231,17 +269,46 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                                                 </div>
 
                                                 <div style={styles.dueDateCell}>
-                                                    {todo.dueDate ? (
+                                                    {editingDueDate === todo.id ? (
+                                                        <input
+                                                            type="date"
+                                                            value={tempDueDate}
+                                                            onChange={(e) => setTempDueDate(e.target.value)}
+                                                            onKeyDown={(e) => handleDueDateKeyPress(e, todo.id)}
+                                                            onBlur={() => handleDueDateSave(todo.id)}
+                                                            style={styles.dueDateInput}
+                                                            autoFocus
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                    ) : todo.dueDate ? (
                                                         <span
                                                             style={{
                                                                 ...styles.dueDate,
-                                                                ...(isOverdue(todo.dueDate) && !todo.completed ? styles.overdueDueDate : {})
+                                                                ...(isOverdue(todo.dueDate) && !todo.completed ? styles.overdueDueDate : {}),
+                                                                cursor: 'pointer'
                                                             }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDueDateClick(todo.id, todo.dueDate);
+                                                            }}
+                                                            title="Click to edit due date"
                                                         >
                                                             {formatDate(todo.dueDate)}
                                                         </span>
                                                     ) : (
-                                                        <span style={styles.noDueDate}>—</span>
+                                                        <span
+                                                            style={{
+                                                                ...styles.noDueDate,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDueDateClick(todo.id);
+                                                            }}
+                                                            title="Click to add due date"
+                                                        >
+                                                            Add due date
+                                                        </span>
                                                     )}
                                                 </div>
 
@@ -286,14 +353,89 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                                                 <div style={styles.subItemsSection}>
                                                     {todo.subItems?.map(subItem => (
                                                         <div key={subItem.id} style={styles.subItemRow}>
-                                                            <div style={styles.subItemCell}>
-                                                                <SubItemComponent
-                                                                    subItem={subItem}
-                                                                    onToggle={(subItemId) => handleToggleSubItem(todo.id, subItemId)}
-                                                                    onDelete={(subItemId) => handleDeleteSubItem(todo.id, subItemId)}
-                                                                    onEdit={(subItemId, newText) => handleEditSubItem(todo.id, subItemId, newText)}
-                                                                    onUpdateDueDate={(subItemId, dueDate) => handleUpdateSubItemDueDate(todo.id, subItemId, dueDate)}
+                                                            <div style={styles.subItemNameCell}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={subItem.completed}
+                                                                    onChange={() => handleToggleSubItem(todo.id, subItem.id)}
+                                                                    style={styles.checkbox}
                                                                 />
+                                                                <span
+                                                                    style={{
+                                                                        ...styles.subItemText,
+                                                                        ...(subItem.completed ? styles.completedTaskText : {})
+                                                                    }}
+                                                                >
+                                                                    {subItem.text}
+                                                                </span>
+                                                            </div>
+
+                                                            <div style={styles.subItemDueDateCell}>
+                                                                {editingDueDate === `${todo.id}-${subItem.id}` ? (
+                                                                    <input
+                                                                        type="date"
+                                                                        value={tempDueDate}
+                                                                        onChange={(e) => setTempDueDate(e.target.value)}
+                                                                        onKeyDown={(e) => handleSubItemDueDateKeyPress(e, todo.id, subItem.id)}
+                                                                        onBlur={() => handleSubItemDueDateSave(todo.id, subItem.id)}
+                                                                        style={styles.dueDateInput}
+                                                                        autoFocus
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    />
+                                                                ) : subItem.dueDate ? (
+                                                                    <span
+                                                                        style={{
+                                                                            ...styles.dueDate,
+                                                                            ...(isOverdue(subItem.dueDate) && !subItem.completed ? styles.overdueDueDate : {}),
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleSubItemDueDateClick(todo.id, subItem.id, subItem.dueDate);
+                                                                        }}
+                                                                        title="Click to edit due date"
+                                                                    >
+                                                                        {formatDate(subItem.dueDate)}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span
+                                                                        style={{
+                                                                            ...styles.noDueDate,
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleSubItemDueDateClick(todo.id, subItem.id);
+                                                                        }}
+                                                                        title="Click to add due date"
+                                                                    >
+                                                                        Add due date
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            <div style={styles.subItemStatusCell}>
+                                                                <span style={{
+                                                                    ...styles.statusBadge,
+                                                                    backgroundColor: subItem.completed ? '#10b98120' : '#6b728020',
+                                                                    color: subItem.completed ? '#10b981' : '#6b7280',
+                                                                    border: `1px solid ${subItem.completed ? '#10b981' : '#6b7280'}40`
+                                                                }}>
+                                                                    {subItem.completed ? '✅ Done' : '⚪ Todo'}
+                                                                </span>
+                                                            </div>
+
+                                                            <div style={styles.subItemActionsCell}>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteSubItem(todo.id, subItem.id);
+                                                                    }}
+                                                                    style={styles.deleteButton}
+                                                                    title="Delete sub-item"
+                                                                >
+                                                                    🗑️
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -378,6 +520,7 @@ const styles = {
     nameColumn: {
         display: 'flex',
         alignItems: 'center',
+        textAlign: 'left' as const,
     },
     dueDateColumn: {
         display: 'flex',
@@ -446,6 +589,7 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
+        textAlign: 'left' as const,
     },
     checkbox: {
         width: '16px',
@@ -457,6 +601,7 @@ const styles = {
         color: 'white',
         fontSize: '0.9rem',
         flex: 1,
+        textAlign: 'left' as const,
     },
     completedTaskText: {
         textDecoration: 'line-through',
@@ -565,11 +710,50 @@ const styles = {
         paddingLeft: '40px',
     },
     subItemRow: {
-        borderBottom: '1px solid #2a2e35',
+        display: 'grid',
+        gridTemplateColumns: '1fr 150px 120px 120px',
+        gap: '16px',
         padding: '8px 20px 8px 0',
+        borderBottom: '1px solid #2a2e35',
+        backgroundColor: '#1a1d23',
     },
     subItemCell: {
         display: 'flex',
         alignItems: 'center',
+    },
+    subItemNameCell: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        textAlign: 'left' as const,
+    },
+    subItemText: {
+        color: '#ccc',
+        fontSize: '0.85rem',
+        flex: 1,
+        textAlign: 'left' as const,
+    },
+    subItemDueDateCell: {
+        display: 'flex',
+        alignItems: 'center',
+    },
+    subItemStatusCell: {
+        display: 'flex',
+        alignItems: 'center',
+    },
+    subItemActionsCell: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+    },
+    dueDateInput: {
+        backgroundColor: '#3a3f47',
+        border: '1px solid #61dafb',
+        borderRadius: '4px',
+        color: 'white',
+        padding: '4px 8px',
+        fontSize: '0.85rem',
+        width: '120px',
     },
 };
