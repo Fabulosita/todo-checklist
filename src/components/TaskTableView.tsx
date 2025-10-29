@@ -39,17 +39,43 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
     const [hoveredTask, setHoveredTask] = useState<string | null>(null);
     const [editingDueDate, setEditingDueDate] = useState<string | null>(null);
     const [tempDueDate, setTempDueDate] = useState<string>('');
+    const [addingSubItemToTask, setAddingSubItemToTask] = useState<string | null>(null);
+    const [newSubItemText, setNewSubItemText] = useState<string>('');
 
     const handleAddSubItem = async (todoId: string) => {
-        const subItemText = prompt('Enter sub-item text:');
-        if (subItemText && subItemText.trim()) {
+        // Show inline text field instead of prompt
+        setAddingSubItemToTask(todoId);
+        setNewSubItemText('');
+        // Automatically expand the task to show the input field
+        setExpandedTasks(prev =>
+            prev.includes(todoId) ? prev : [...prev, todoId]
+        );
+    };
+
+    const handleSaveNewSubItem = async (todoId: string) => {
+        if (newSubItemText.trim()) {
             try {
-                await addSubItem(todoId, subItemText.trim());
-                // The real-time subscription will update the UI automatically
+                await addSubItem(todoId, newSubItemText.trim());
+                // Clear the input and hide it
+                setAddingSubItemToTask(null);
+                setNewSubItemText('');
             } catch (error) {
                 console.error('Error adding sub-item:', error);
                 alert('Failed to add sub-item. Please try again.');
             }
+        }
+    };
+
+    const handleCancelAddSubItem = () => {
+        setAddingSubItemToTask(null);
+        setNewSubItemText('');
+    };
+
+    const handleSubItemInputKeyPress = (e: React.KeyboardEvent, todoId: string) => {
+        if (e.key === 'Enter') {
+            handleSaveNewSubItem(todoId);
+        } else if (e.key === 'Escape') {
+            handleCancelAddSubItem();
         }
     };
 
@@ -349,7 +375,7 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                                                 </div>
                                             </div>
 
-                                            {isTaskExpanded && subItemsCount > 0 && (
+                                            {isTaskExpanded && (subItemsCount > 0 || addingSubItemToTask === todo.id) && (
                                                 <div style={styles.subItemsSection}>
                                                     {todo.subItems?.map(subItem => (
                                                         <div key={subItem.id} style={styles.subItemRow}>
@@ -439,6 +465,59 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                                                             </div>
                                                         </div>
                                                     ))}
+
+                                                    {addingSubItemToTask === todo.id && (
+                                                        <div style={styles.subItemRow}>
+                                                            <div style={styles.subItemNameCell}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={newSubItemText}
+                                                                    onChange={(e) => setNewSubItemText(e.target.value)}
+                                                                    onKeyDown={(e) => handleSubItemInputKeyPress(e, todo.id)}
+                                                                    onBlur={() => handleCancelAddSubItem()}
+                                                                    placeholder="Enter sub-item text..."
+                                                                    style={styles.subItemInput}
+                                                                    autoFocus
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                />
+                                                            </div>
+                                                            <div style={styles.subItemDueDateCell}>
+                                                                <span style={styles.noDueDate}>—</span>
+                                                            </div>
+                                                            <div style={styles.subItemStatusCell}>
+                                                                <span style={{
+                                                                    ...styles.statusBadge,
+                                                                    backgroundColor: '#6b728020',
+                                                                    color: '#6b7280',
+                                                                    border: '1px solid #6b728040'
+                                                                }}>
+                                                                    ⚪ Todo
+                                                                </span>
+                                                            </div>
+                                                            <div style={styles.subItemActionsCell}>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleSaveNewSubItem(todo.id);
+                                                                    }}
+                                                                    style={styles.saveButton}
+                                                                    title="Save sub-item"
+                                                                >
+                                                                    ✓
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCancelAddSubItem();
+                                                                    }}
+                                                                    style={styles.cancelButton}
+                                                                    title="Cancel"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -755,5 +834,35 @@ const styles = {
         padding: '4px 8px',
         fontSize: '0.85rem',
         width: '120px',
+    },
+    subItemInput: {
+        backgroundColor: '#3a3f47',
+        border: '1px solid #61dafb',
+        borderRadius: '4px',
+        color: 'white',
+        padding: '8px 12px',
+        fontSize: '0.85rem',
+        width: '100%',
+        outline: 'none',
+    },
+    saveButton: {
+        background: '#10b981',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        padding: '4px 8px',
+        fontSize: '0.85rem',
+        transition: 'background-color 0.2s',
+    },
+    cancelButton: {
+        background: '#ef4444',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        padding: '4px 8px',
+        fontSize: '0.85rem',
+        transition: 'background-color 0.2s',
     },
 };

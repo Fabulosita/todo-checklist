@@ -123,7 +123,7 @@ export const addSubItem = async (todoId: string, text: string, dueDate?: string)
         const subItemData: any = {
             text: text.trim(),
             completed: false,
-            createdAt: new Date().toISOString(),
+            createdAt: serverTimestamp(),
         };
 
         // Only add dueDate if it's provided and not empty
@@ -144,7 +144,7 @@ export const updateSubItem = async (todoId: string, subItemId: string, updates: 
         const subItemRef = doc(db, 'todos', todoId, 'subItems', subItemId);
         const updateData: any = {
             ...updates,
-            updatedAt: new Date().toISOString()
+            updatedAt: serverTimestamp()
         };
 
         // Handle dueDate - remove field entirely if it's empty
