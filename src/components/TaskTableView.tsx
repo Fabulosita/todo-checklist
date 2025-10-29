@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Todo } from '../types/Todo';
-import { formatDate, isOverdue } from '../utils/dateHelpers';
+import { formatDate, isOverdue, formatDateForInput } from '../utils/dateHelpers';
 import { addSubItem, updateSubItem, deleteSubItem } from '../firebase-service';
 
 interface TaskTableViewProps {
@@ -111,7 +111,7 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
 
     const handleDueDateClick = (todoId: string, currentDueDate?: string) => {
         setEditingDueDate(todoId);
-        setTempDueDate(currentDueDate || '');
+        setTempDueDate(formatDateForInput(currentDueDate));
     };
 
     const handleDueDateSave = async (todoId: string) => {
@@ -139,7 +139,7 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
 
     const handleSubItemDueDateClick = (todoId: string, subItemId: string, currentDueDate?: string) => {
         setEditingDueDate(`${todoId}-${subItemId}`);
-        setTempDueDate(currentDueDate || '');
+        setTempDueDate(formatDateForInput(currentDueDate));
     };
 
     const handleSubItemDueDateSave = async (todoId: string, subItemId: string) => {
