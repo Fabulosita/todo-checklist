@@ -230,7 +230,7 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                         }}
                         onClick={() => setCurrentView('timeline')}
                     >
-                        � Timeline
+                        📅 Timeline
                     </button>
                 </div>
             </div>
