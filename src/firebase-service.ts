@@ -60,25 +60,12 @@ export const addTodo = async (text: string, dueDate?: string): Promise<void> => 
 // Update an existing todo
 export const updateTodo = async (id: string, updates: any): Promise<void> => {
     try {
-        console.log('firebase-service.updateTodo called:', { id, updates });
-        console.log('updates.subItems:', updates.subItems);
         const todoRef = doc(db, 'todos', id);
-        console.log('=== FIREBASE UPDATE DEBUG ===');
-        console.log('Raw updates object:', updates);
-        console.log('Object.keys(updates):', Object.keys(updates));
-        console.log('updates.subItems specifically:', updates.subItems);
-        console.log('JSON.stringify(updates):', JSON.stringify(updates, null, 2));
 
         const updateData: any = {
             ...updates,
             updatedAt: serverTimestamp()
         };
-
-        console.log('updateData after spread:', updateData);
-        console.log('updateData.subItems:', updateData.subItems);
-        console.log('typeof updateData.subItems:', typeof updateData.subItems);
-        console.log('Array.isArray(updateData.subItems):', Array.isArray(updateData.subItems));
-        console.log('JSON.stringify(updateData):', JSON.stringify(updateData, null, 2));
 
         // Handle dueDate - remove field entirely if it's empty
         if (updates.dueDate !== undefined) {
@@ -92,13 +79,10 @@ export const updateTodo = async (id: string, updates: any): Promise<void> => {
 
         // Handle subItems - ensure it's properly serializable
         if (updates.subItems !== undefined) {
-            console.log('Processing subItems update:', updates.subItems);
             updateData.subItems = updates.subItems;
         }
 
-        console.log('firebase-service.updateData to be sent:', updateData);
         await updateDoc(todoRef, updateData);
-        console.log('firebase-service.updateDoc completed successfully');
     } catch (error) {
         console.error('Error updating todo:', error);
         throw new Error('Failed to update todo. Please try again.');
@@ -232,14 +216,11 @@ export const subscribeTodos = (
                 return bTime - aTime;
             });
 
-        console.log('Firebase subscription sending todos array:', todosArray);
         callback(todosArray);
     };
 
     const unsubscribeTodos = onSnapshot(q,
         (querySnapshot) => {
-            console.log('Todos snapshot changed');
-
             // Handle todos changes
             querySnapshot.docChanges().forEach((change) => {
                 const todoId = change.doc.id;
@@ -266,7 +247,6 @@ export const subscribeTodos = (
                         const subItemsQuery = query(subItemsCollection, orderBy('createdAt', 'asc'));
 
                         const unsubscribeSubItems = onSnapshot(subItemsQuery, (subSnapshot) => {
-                            console.log(`Sub-items snapshot changed for todo ${todoId}`);
                             const subItems: SubItem[] = [];
                             subSnapshot.forEach((subDoc) => {
                                 const subData = subDoc.data();

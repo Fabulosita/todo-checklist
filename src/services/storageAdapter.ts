@@ -25,7 +25,6 @@ export class StorageAdapter {
 
     private constructor() {
         this.useMobileStorage = isMobile();
-        console.log(`Storage mode: ${this.useMobileStorage ? 'Local Storage (Mobile)' : 'Firebase (Web)'}`);
     }
 
     public static getInstance(): StorageAdapter {
@@ -92,7 +91,6 @@ export class StorageAdapter {
     // Force switch storage type (for testing)
     setStorageType(useMobile: boolean): void {
         this.useMobileStorage = useMobile;
-        console.log(`Switched to: ${this.useMobileStorage ? 'Local Storage' : 'Firebase'}`);
     }
 }
 

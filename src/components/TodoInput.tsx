@@ -30,10 +30,10 @@ export const TodoInput = ({ onAddTodo, loading }: TodoInputProps) => {
         }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !isSubmitting) {
-            handleSubmit();
-        }
+
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(e.target.value);
     };
 
     const isDisabled = loading || isSubmitting;
@@ -43,10 +43,20 @@ export const TodoInput = ({ onAddTodo, loading }: TodoInputProps) => {
             <input
                 type="text"
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={handleInputChange}
+
                 placeholder="Add a new todo..."
-                onKeyPress={handleKeyPress}
                 disabled={isDisabled}
+                style={{
+                    minWidth: '500px',
+                    minHeight: '40px',
+                    padding: '12px 15px',
+                    fontSize: '16px',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    color: '#333'
+                }}
             />
             <input
                 type="date"
@@ -55,6 +65,16 @@ export const TodoInput = ({ onAddTodo, loading }: TodoInputProps) => {
                 className="date-input"
                 title="Due date (optional)"
                 disabled={isDisabled}
+                style={{
+                    maxWidth: '150px',
+                    minHeight: '40px',
+                    padding: '12px 15px',
+                    fontSize: '16px',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    color: '#333'
+                }}
             />
             <button onClick={handleSubmit} disabled={isDisabled || !inputValue.trim()}>
                 {isSubmitting ? 'Adding...' : 'Add'}

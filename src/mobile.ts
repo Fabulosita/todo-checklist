@@ -22,5 +22,3 @@ export const isWeb = (): boolean => {
 export const getCurrentPlatform = (): string => {
     return Capacitor.getPlatform();
 };
-
-console.log('Platform:', getCurrentPlatform(), 'Is Mobile:', isMobile());

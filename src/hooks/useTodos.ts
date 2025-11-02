@@ -22,13 +22,14 @@ export const useTodos = (): UseTodosReturn => {
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
 
-        // Set a timeout to detect connection issues
+        // Set a timeout to detect connection issues (shorter for web)
+        const timeoutDuration = storageAdapter.getStorageType() === 'localStorage' ? 5000 : 8000;
         timeoutId = setTimeout(() => {
             if (loading) {
                 setLoading(false);
                 setError(`Unable to connect to ${storageAdapter.getStorageType()}. Working in offline mode.`);
             }
-        }, 10000); // 10 second timeout
+        }, timeoutDuration);
 
         const unsubscribe = storageAdapter.subscribeTodos(
             (todosFromStorage: Todo[]) => {
@@ -108,14 +109,7 @@ export const useTodos = (): UseTodosReturn => {
 
     const updateSubItems = async (todoId: string, subItems: SubItem[]): Promise<void> => {
         try {
-            console.log('=== useTodos.updateSubItems START ===');
-            console.log('useTodos.updateSubItems called:', { todoId, subItems });
-            console.log('subItems length:', subItems.length);
-            console.log('subItems JSON:', JSON.stringify(subItems, null, 2));
-
             await storageAdapter.updateSubItems(todoId, subItems);
-            console.log('useTodos.updateSubItems completed successfully');
-            console.log('=== useTodos.updateSubItems END ===');
         } catch (error) {
             console.error('useTodos.updateSubItems error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to update sub-items';
