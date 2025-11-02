@@ -4,6 +4,16 @@ import { Timestamp } from 'firebase/firestore';
 const TODOS_STORAGE_KEY = 'todos';
 const STORAGE_VERSION_KEY = 'todosVersion';
 const CURRENT_VERSION = '1.0';
+const STORAGE_CHANGE_EVENT = 'localStorageChange';
+
+// Custom event emitter for local storage changes
+class StorageEventEmitter extends EventTarget {
+    notifyChange() {
+        this.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT));
+    }
+}
+
+const storageEmitter = new StorageEventEmitter();
 
 // Create a Timestamp-like object for local storage
 const createLocalTimestamp = (date: Date = new Date()) => ({
@@ -40,10 +50,12 @@ export const getTodosFromStorage = (): Todo[] => {
     }
 };
 
-// Save todos to localStorage
+// Save todos to localStorage and notify listeners
 const saveTodosToStorage = (todos: Todo[]): void => {
     try {
         localStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(todos));
+        // Notify all listeners of the change
+        storageEmitter.notifyChange();
     } catch (error) {
         console.error('Error saving todos to localStorage:', error);
         throw new Error('Failed to save data locally');
@@ -114,11 +126,12 @@ export const updateSubItemsInStorage = async (todoId: string, subItems: SubItem[
     saveTodosToStorage(todos);
 };
 
-// Subscribe to storage changes (for real-time updates across tabs)
+// Subscribe to storage changes (works within same tab and across tabs)
 export const subscribeToStorageChanges = (
     callback: (todos: Todo[]) => void,
     errorCallback?: (error: Error) => void
 ): (() => void) => {
+    // Handle localStorage changes from other tabs
     const handleStorageChange = (e: StorageEvent) => {
         if (e.key === TODOS_STORAGE_KEY) {
             try {
@@ -130,7 +143,19 @@ export const subscribeToStorageChanges = (
         }
     };
 
+    // Handle localStorage changes from same tab
+    const handleLocalChange = () => {
+        try {
+            const todos = getTodosFromStorage();
+            callback(todos);
+        } catch (error) {
+            errorCallback?.(error as Error);
+        }
+    };
+
+    // Listen to both cross-tab and same-tab changes
     window.addEventListener('storage', handleStorageChange);
+    storageEmitter.addEventListener(STORAGE_CHANGE_EVENT, handleLocalChange);
 
     // Initial load
     setTimeout(() => {
@@ -145,6 +170,7 @@ export const subscribeToStorageChanges = (
     // Return unsubscribe function
     return () => {
         window.removeEventListener('storage', handleStorageChange);
+        storageEmitter.removeEventListener(STORAGE_CHANGE_EVENT, handleLocalChange);
     };
 };
 
