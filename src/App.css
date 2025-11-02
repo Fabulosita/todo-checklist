@@ -1,20 +1,29 @@
 .App {
     text-align: center;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
 }
 
 .App-header {
     background-color: #282c34;
-    padding: 20px;
+    padding: 15px;
     color: white;
     min-height: 100vh;
+    min-height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* Add safe area for devices with notches like S20+ */
+    padding-top: max(15px, env(safe-area-inset-top));
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
+    padding-left: max(15px, env(safe-area-inset-left));
+    padding-right: max(15px, env(safe-area-inset-right));
 }
 
 .App-header h1 {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     color: #61dafb;
+    font-size: 1.8rem;
 }
 
 .error-message {
@@ -81,48 +90,78 @@
 }
 
 .todo-input {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     gap: 10px;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    padding: 0 15px;
+}
+
+/* Mobile-first: stack inputs vertically */
+.todo-input input,
+.todo-input button {
+    padding: 12px 15px;
+    font-size: 16px;
+    /* Prevents zoom on iOS */
+    border: none;
+    border-radius: 8px;
+    width: 100%;
 }
 
 .todo-input input {
-    flex: 1;
-    padding: 10px;
-    font-size: 16px;
-    border: none;
-    border-radius: 4px;
+    background-color: white;
+    color: #333;
 }
 
 .date-input {
-    min-width: 150px;
-    flex: none !important;
+    min-width: auto;
 }
 
 .todo-input button {
-    padding: 10px 20px;
-    font-size: 16px;
     background-color: #61dafb;
     color: #282c34;
-    border: none;
-    border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
+    min-height: 48px;
+    /* Touch-friendly */
 }
 
 .todo-input button:hover {
     background-color: #21a0c4;
 }
 
+/* Tablet and larger: horizontal layout */
+@media (min-width: 768px) {
+    .todo-input {
+        flex-direction: row;
+        margin-bottom: 30px;
+        padding: 0;
+    }
+
+    .todo-input input {
+        flex: 1;
+    }
+
+    .date-input {
+        min-width: 150px;
+        flex: none !important;
+    }
+
+    .todo-input button {
+        width: auto;
+        padding: 10px 20px;
+        min-height: auto;
+    }
+}
+
 .edit-section {
     background-color: #1a1d23;
-    padding: 20px;
+    padding: 16px;
     border-radius: 8px;
-    margin-bottom: 30px;
+    margin: 0 15px 20px 15px;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
@@ -132,23 +171,45 @@
     margin-top: 0;
     color: #61dafb;
     margin-bottom: 15px;
+    font-size: 1.2rem;
 }
 
 .edit-due-date {
     display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.edit-due-date input {
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: white;
+    color: #333;
+}
+
+.edit-buttons {
+    display: flex;
     gap: 10px;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+}
+
+.update-btn,
+.cancel-btn {
+    padding: 12px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    min-height: 48px;
 }
 
 .update-btn {
-    padding: 8px 16px;
     background-color: #28a745;
     color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
 }
 
 .update-btn:hover {
@@ -156,38 +217,66 @@
 }
 
 .cancel-btn {
-    padding: 8px 16px;
     background-color: #6c757d;
     color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
 }
 
 .cancel-btn:hover {
     background-color: #545b62;
 }
 
+/* Tablet and larger screens */
+@media (min-width: 768px) {
+    .edit-section {
+        padding: 20px;
+        margin: 0 auto 30px auto;
+    }
+
+    .edit-due-date {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .edit-due-date input {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .edit-buttons {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .update-btn,
+    .cancel-btn {
+        padding: 8px 16px;
+        font-size: 14px;
+        min-height: auto;
+    }
+}
+
 .todo-list {
     list-style: none;
-    padding: 0;
+    padding: 0 15px;
     max-width: 600px;
     margin: 0 auto;
 }
 
 .todo-list li {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 15px;
-    margin-bottom: 10px;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 16px;
+    margin-bottom: 14px;
     background-color: #3a3f47;
-    border-radius: 4px;
+    border-radius: 8px;
     text-align: left;
     cursor: pointer;
     border: 2px solid transparent;
     transition: all 0.2s ease;
+    /* Touch-friendly minimum height */
+    min-height: 65px;
 }
 
 .todo-list li:hover {
@@ -214,27 +303,44 @@
 }
 
 .todo-list input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
+    /* Better touch target */
+    min-width: 20px;
+    min-height: 20px;
+    /* Align with first line of text */
+    margin-top: 2px;
+    flex-shrink: 0;
 }
 
 .todo-content {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
+    min-width: 0;
+    /* Prevent text overflow */
+    padding: 4px 0;
 }
 
 .todo-text {
     font-size: 16px;
     font-weight: 500;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.4;
+    margin: 0;
+    /* Better text spacing */
+    letter-spacing: 0.01em;
 }
 
 .due-date {
-    font-size: 12px;
+    font-size: 13px;
     color: #888;
     font-style: italic;
+    line-height: 1.3;
+    margin: 0;
 }
 
 .todo-list li.overdue .due-date {
@@ -243,17 +349,48 @@
 }
 
 .delete-btn {
-    padding: 5px 10px;
+    padding: 8px 12px;
     background-color: #dc3545;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
+    /* Touch-friendly */
+    min-height: 40px;
+    min-width: 40px;
+    /* Align with content */
+    align-self: flex-start;
+    margin-top: 2px;
+    flex-shrink: 0;
 }
 
 .delete-btn:hover {
     background-color: #c82333;
+}
+
+/* Tablet and larger screens */
+@media (min-width: 768px) {
+    .todo-list {
+        padding: 0;
+    }
+
+    .todo-list li {
+        padding: 15px;
+        margin-bottom: 10px;
+        min-height: auto;
+    }
+
+    .todo-list input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+    }
+
+    .delete-btn {
+        padding: 5px 10px;
+        min-height: auto;
+        min-width: auto;
+    }
 }
 
 .empty-state {
