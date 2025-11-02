@@ -576,11 +576,12 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
 const styles = {
     container: {
         width: '100%',
-        maxWidth: '1200px',
+        maxWidth: '100%',
         margin: '0 auto',
         backgroundColor: '#1a1d23',
         borderRadius: '8px',
         overflow: 'hidden',
+        boxSizing: 'border-box' as const,
     },
     header: {
         display: 'flex',

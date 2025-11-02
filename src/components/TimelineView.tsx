@@ -213,11 +213,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 const styles = {
     container: {
         width: '100%',
-        maxWidth: '1200px',
+        maxWidth: '100%',
         margin: '0 auto',
         backgroundColor: '#1a1d23',
         borderRadius: '8px',
         padding: '20px',
+        boxSizing: 'border-box' as const,
+        overflow: 'hidden',
     },
     header: {
         display: 'flex',
@@ -225,11 +227,14 @@ const styles = {
         alignItems: 'center',
         marginBottom: '20px',
         padding: '0 10px',
+        flexWrap: 'wrap' as const,
+        gap: '10px',
     },
     navigationSection: {
         display: 'flex',
         alignItems: 'center',
         gap: '20px',
+        flexWrap: 'wrap' as const,
     },
     navButton: {
         background: '#3a3f47',
@@ -245,8 +250,9 @@ const styles = {
         fontSize: '1.5rem',
         fontWeight: 'bold',
         color: 'white',
-        minWidth: '200px',
+        minWidth: '150px',
         textAlign: 'center' as const,
+        flex: '0 0 auto',
     },
     todayButton: {
         background: '#61dafb',
@@ -261,12 +267,14 @@ const styles = {
     },
     calendar: {
         width: '100%',
+        overflow: 'hidden',
     },
     dayHeaders: {
         display: 'grid',
         gridTemplateColumns: 'repeat(7, 1fr)',
         gap: '1px',
         marginBottom: '1px',
+        width: '100%',
     },
     dayHeader: {
         padding: '12px',
@@ -275,12 +283,14 @@ const styles = {
         textAlign: 'center' as const,
         fontWeight: 'bold',
         fontSize: '14px',
+        minWidth: 0, // Allow shrinking
     },
     calendarGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(7, 1fr)',
         gap: '1px',
         backgroundColor: '#434954',
+        width: '100%',
     },
     calendarDay: {
         minHeight: '120px',
@@ -291,6 +301,9 @@ const styles = {
         position: 'relative' as const,
         display: 'flex',
         flexDirection: 'column' as const,
+        minWidth: 0, // Allow shrinking
+        overflow: 'hidden',
+        boxSizing: 'border-box' as const,
     },
     otherMonthDay: {
         backgroundColor: '#1a1d23',
