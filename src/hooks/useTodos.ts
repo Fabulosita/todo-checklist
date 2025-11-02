@@ -1,11 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Todo, TodoFormData, TodoUpdateData, SubItem } from '../types/Todo';
-import {
-    addTodo as firebaseAddTodo,
-    updateTodo as firebaseUpdateTodo,
-    deleteTodo as firebaseDeleteTodo,
-    subscribeTodos,
-} from '../firebase-service';
+import { storageAdapter } from '../services/storageAdapter';
 
 interface UseTodosReturn {
     todos: Todo[];
@@ -23,7 +18,7 @@ export const useTodos = (): UseTodosReturn => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Subscribe to Firebase data changes
+    // Subscribe to data changes using storage adapter
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
 
@@ -31,22 +26,22 @@ export const useTodos = (): UseTodosReturn => {
         timeoutId = setTimeout(() => {
             if (loading) {
                 setLoading(false);
-                setError('Unable to connect to Firebase. You can still use the app, but changes won\'t be saved.');
+                setError(`Unable to connect to ${storageAdapter.getStorageType()}. Working in offline mode.`);
             }
         }, 10000); // 10 second timeout
 
-        const unsubscribe = subscribeTodos(
-            (todosFromFirebase) => {
+        const unsubscribe = storageAdapter.subscribeTodos(
+            (todosFromStorage: Todo[]) => {
                 clearTimeout(timeoutId);
-                setTodos(todosFromFirebase);
+                setTodos(todosFromStorage);
                 setLoading(false);
                 setError(null);
             },
-            (firebaseError) => {
+            (storageError: Error) => {
                 clearTimeout(timeoutId);
                 setLoading(false);
-                setError('Failed to load todos from Firebase. Working in offline mode.');
-                console.error('Firebase subscription error:', firebaseError);
+                setError(`Failed to load todos from ${storageAdapter.getStorageType()}. Working in offline mode.`);
+                console.error('Storage subscription error:', storageError);
             }
         );
 
@@ -64,7 +59,7 @@ export const useTodos = (): UseTodosReturn => {
 
         try {
             setError(null);
-            await firebaseAddTodo(todoData.text, todoData.dueDate);
+            await storageAdapter.addTodo(todoData);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to add todo';
             setError(errorMessage);
@@ -85,9 +80,10 @@ export const useTodos = (): UseTodosReturn => {
                 text: updates.text ?? todo.text,
                 completed: updates.completed ?? todo.completed,
                 dueDate: updates.dueDate ?? todo.dueDate,
+                subItems: updates.subItems ?? todo.subItems,
             };
 
-            await firebaseUpdateTodo(id, updatedData);
+            await storageAdapter.updateTodo(id, updatedData);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to update todo';
             setError(errorMessage);
@@ -98,7 +94,7 @@ export const useTodos = (): UseTodosReturn => {
     const deleteTodo = async (id: string): Promise<void> => {
         try {
             setError(null);
-            await firebaseDeleteTodo(id);
+            await storageAdapter.deleteTodo(id);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to delete todo';
             setError(errorMessage);
@@ -117,7 +113,7 @@ export const useTodos = (): UseTodosReturn => {
             console.log('subItems length:', subItems.length);
             console.log('subItems JSON:', JSON.stringify(subItems, null, 2));
 
-            await updateTodo(todoId, { subItems });
+            await storageAdapter.updateSubItems(todoId, subItems);
             console.log('useTodos.updateSubItems completed successfully');
             console.log('=== useTodos.updateSubItems END ===');
         } catch (error) {

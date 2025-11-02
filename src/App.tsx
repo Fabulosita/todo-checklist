@@ -8,6 +8,7 @@ import { TaskTableView } from './components/TaskTableView';
 import { LoadingState } from './components/LoadingState';
 import { LoginPage } from './components/LoginPage';
 import { Header } from './components/Header';
+import { isMobile } from './mobile';
 
 function App() {
     const { isLoggedIn, isLoading: authLoading, login, logout } = useAuth();
@@ -73,6 +74,11 @@ function App() {
             )}
 
             <div className="App-header">
+                {/* Storage indicator */}
+                <div className="storage-indicator">
+                    {isMobile() ? '📱 Local Storage' : '☁️ Firebase'}
+                </div>
+
                 <TodoInput
                     onAddTodo={addTodo}
                     loading={loading}

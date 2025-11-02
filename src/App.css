@@ -398,3 +398,26 @@
     font-style: italic;
     margin-top: 50px;
 }
+
+/* Storage indicator */
+.storage-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+@media (min-width: 768px) {
+    .storage-indicator {
+        top: 20px;
+        right: 20px;
+        font-size: 13px;
+    }
+}
