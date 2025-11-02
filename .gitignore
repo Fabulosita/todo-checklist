@@ -79,3 +79,38 @@ coverage/
 tmp/
 temp/
 .firebaserc
+
+# Android
+android/app/build/
+android/app/release/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/gradle.properties
+android/app/google-services.json
+
+# Capacitor
+capacitor.config.json
+.capacitor/
+
+# APK files (optional - remove if you want to commit APKs)
+*.apk
+*.aab
+
+# Keystore files (NEVER commit these!)
+*.keystore
+*.jks
+key.properties
+
+# iOS (for future iOS builds)
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/config.xml
+ios/App/build/
+ios/App/DerivedData/
+
+# Gradle Wrapper (you can keep this or ignore it)
+# android/gradle/wrapper/gradle-wrapper.jar

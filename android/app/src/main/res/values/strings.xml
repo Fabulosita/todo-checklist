@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Todo Checklist</string>
+    <string name="title_activity_main">Todo Checklist</string>
+    <string name="package_name">com.fabulosita.todochecklist</string>
+    <string name="custom_url_scheme">com.fabulosita.todochecklist</string>
+</resources>
