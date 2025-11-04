@@ -122,6 +122,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     };
 
     // Get selected date items with main tasks grouped above their sub-items
+    // Parents are ordered consistently; sub-items under each parent are ordered too
     const getSelectedDateItemsGrouped = (): CalendarItem[] => {
         const items = getSelectedDateItems();
         if (items.length === 0) return items;
@@ -129,6 +130,24 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         const grouped: CalendarItem[] = [];
         const todos = items.filter(i => i.type === 'todo');
         const subItems = items.filter(i => i.type === 'subitem');
+
+        const safeDate = (d?: string) => (d ? new Date(d).getTime() : Number.POSITIVE_INFINITY);
+        const byText = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+        const sortTodos = (arr: CalendarItem[]) =>
+            [...arr].sort((a, b) => {
+                // Same-day selection means due dates are often equal; fall back to text
+                const ad = safeDate(a.dueDate);
+                const bd = safeDate(b.dueDate);
+                if (ad !== bd) return ad - bd;
+                return byText(a.text, b.text);
+            });
+        const sortSubItems = (arr: CalendarItem[]) =>
+            [...arr].sort((a, b) => {
+                const ad = safeDate(a.dueDate);
+                const bd = safeDate(b.dueDate);
+                if (ad !== bd) return ad - bd;
+                return byText(a.text, b.text);
+            });
 
         // Map parentId -> sub-items
         const subsByParent = new Map<string, CalendarItem[]>();
@@ -139,32 +158,41 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             subsByParent.set(parentId, list);
         });
 
-        // Place each todo followed by its sub-items (if any)
-        todos.forEach(todo => {
+        // Place each todo followed by its sub-items (if any), using stable ordering
+        sortTodos(todos).forEach(todo => {
             grouped.push(todo);
             const subs = subsByParent.get(todo.id);
             if (subs && subs.length) {
-                grouped.push(...subs);
+                grouped.push(...sortSubItems(subs));
                 subsByParent.delete(todo.id);
             }
         });
 
         // Any remaining sub-items whose parent isn't due this day
-        subsByParent.forEach((remSubs) => {
-            if (remSubs.length > 0) {
-                const parentTodo = remSubs[0].todo;
-                // Insert the parent main task (even if not due this day) before its sub-items
-                grouped.push({
+        // Insert the parent (context-only) before its sub-items, ordered by parent due date/text
+        const remainingParents = Array.from(subsByParent.keys())
+            .map(pid => subsByParent.get(pid)?.[0]?.todo)
+            .filter(Boolean) as Todo[];
+        remainingParents
+            .sort((a, b) => {
+                const ad = safeDate(a.dueDate);
+                const bd = safeDate(b.dueDate);
+                if (ad !== bd) return ad - bd;
+                return byText(a.text, b.text);
+            })
+            .forEach(parentTodo => {
+                const contextParent: CalendarItem = {
                     type: 'todo',
                     id: parentTodo.id,
                     text: parentTodo.text,
                     completed: parentTodo.completed,
                     dueDate: parentTodo.dueDate,
                     todo: parentTodo
-                });
-                grouped.push(...remSubs);
-            }
-        });
+                };
+                grouped.push(contextParent);
+                const remSubs = subsByParent.get(parentTodo.id) || [];
+                grouped.push(...sortSubItems(remSubs));
+            });
 
         return grouped;
     };

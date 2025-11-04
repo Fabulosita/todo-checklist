@@ -174,23 +174,43 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
         return 'NEW';
     };
 
+    // Sort helper: chronological by due date (undated tasks at the end)
+    const sortByDueDateAsc = (a: Todo, b: Todo) => {
+        const toLocalDateMs = (dateString?: string): number => {
+            if (!dateString) return Number.POSITIVE_INFINITY; // undated last
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                const [y, m, d] = dateString.split('-').map(Number);
+                return new Date(y, m - 1, d).getTime();
+            }
+            const t = new Date(dateString).getTime();
+            return isNaN(t) ? Number.POSITIVE_INFINITY : t;
+        };
+        return toLocalDateMs(a.dueDate) - toLocalDateMs(b.dueDate);
+    };
+
     const groupTasksByStatus = (): TaskGroup[] => {
         const groups: TaskGroup[] = [
             {
                 name: 'Current Tasks',
-                tasks: todos.filter(todo => !todo.completed && !isOverdue(todo.dueDate)),
+                tasks: todos
+                    .filter(todo => !todo.completed && !isOverdue(todo.dueDate))
+                    .sort(sortByDueDateAsc),
                 color: '#3b82f6',
                 icon: '📋'
             },
             {
                 name: 'Overdue Tasks',
-                tasks: todos.filter(todo => !todo.completed && isOverdue(todo.dueDate)),
+                tasks: todos
+                    .filter(todo => !todo.completed && isOverdue(todo.dueDate))
+                    .sort(sortByDueDateAsc),
                 color: '#ef4444',
                 icon: '⚠️'
             },
             {
                 name: 'Completed Tasks',
-                tasks: todos.filter(todo => todo.completed),
+                tasks: todos
+                    .filter(todo => todo.completed)
+                    .sort(sortByDueDateAsc),
                 color: '#10b981',
                 icon: '✅'
             }
