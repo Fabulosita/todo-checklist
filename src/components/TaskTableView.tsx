@@ -239,6 +239,7 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
                 <TimelineView
                     todos={todos}
                     onToggleTodo={onToggleTodo}
+                    onToggleSubItem={handleToggleSubItem}
                     onDeleteTodo={onDeleteTodo}
                     onSelectTodo={onSelectTodo}
                     selectedTodoId={selectedTodoId}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Todo } from '../types/Todo';
+import { Todo, SubItem } from '../types/Todo';
 import { isOverdue } from '../utils/dateHelpers';
 
 // Add CSS keyframes for sidebar animation
@@ -14,9 +14,22 @@ const sidebarStyles = `
 }
 `;
 
+// Define calendar item types
+interface CalendarItem {
+    type: 'todo' | 'subitem';
+    id: string;
+    text: string;
+    completed: boolean;
+    dueDate?: string;
+    todo: Todo;
+    subItem?: SubItem;
+    isInvalidDueDate?: boolean; // true if sub-item is due after parent
+}
+
 interface TimelineViewProps {
     todos: Todo[];
     onToggleTodo: (id: string) => Promise<void>;
+    onToggleSubItem: (todoId: string, subItemId: string) => Promise<void>;
     onDeleteTodo: (id: string) => Promise<void>;
     onSelectTodo: (id: string) => void;
     selectedTodoId: string | null;
@@ -26,12 +39,13 @@ interface CalendarDay {
     date: Date;
     dateString: string;
     isCurrentMonth: boolean;
-    todos: Todo[];
+    items: CalendarItem[]; // Changed from todos to items
 }
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
     todos,
     onToggleTodo,
+    onToggleSubItem,
     onDeleteTodo,
     onSelectTodo,
     selectedTodoId
@@ -56,10 +70,103 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         setSelectedDate(null);
     };
 
-    // Get todos for selected date
-    const getSelectedDateTodos = (): Todo[] => {
+    // (Replaced by getSelectedDateItems)
+
+    // Helper function to get all calendar items (todos and sub-items) for a specific date
+    const getItemsForDate = (dateString: string): CalendarItem[] => {
+        const items: CalendarItem[] = [];
+
+        todos.forEach(todo => {
+            // Add the main todo if it has a due date for this date
+            if (todo.dueDate === dateString) {
+                items.push({
+                    type: 'todo',
+                    id: todo.id,
+                    text: todo.text,
+                    completed: todo.completed,
+                    dueDate: todo.dueDate,
+                    todo: todo
+                });
+            }
+
+            // Add sub-items if they have due dates for this date
+            if (todo.subItems) {
+                todo.subItems.forEach(subItem => {
+                    if (subItem.dueDate === dateString) {
+                        // Check if sub-item is due after parent (invalid)
+                        const isInvalidDueDate = !!(todo.dueDate && subItem.dueDate &&
+                            new Date(subItem.dueDate) > new Date(todo.dueDate));
+
+                        items.push({
+                            type: 'subitem',
+                            id: subItem.id,
+                            text: subItem.text,
+                            completed: subItem.completed,
+                            dueDate: subItem.dueDate,
+                            todo: todo,
+                            subItem: subItem,
+                            isInvalidDueDate: isInvalidDueDate
+                        });
+                    }
+                });
+            }
+        });
+
+        return items;
+    };
+
+    // Get items for selected date
+    const getSelectedDateItems = (): CalendarItem[] => {
         if (!selectedDate) return [];
-        return getTodosForDate(selectedDate);
+        return getItemsForDate(selectedDate);
+    };
+
+    // Get selected date items with main tasks grouped above their sub-items
+    const getSelectedDateItemsGrouped = (): CalendarItem[] => {
+        const items = getSelectedDateItems();
+        if (items.length === 0) return items;
+
+        const grouped: CalendarItem[] = [];
+        const todos = items.filter(i => i.type === 'todo');
+        const subItems = items.filter(i => i.type === 'subitem');
+
+        // Map parentId -> sub-items
+        const subsByParent = new Map<string, CalendarItem[]>();
+        subItems.forEach(si => {
+            const parentId = si.todo.id;
+            const list = subsByParent.get(parentId) || [];
+            list.push(si);
+            subsByParent.set(parentId, list);
+        });
+
+        // Place each todo followed by its sub-items (if any)
+        todos.forEach(todo => {
+            grouped.push(todo);
+            const subs = subsByParent.get(todo.id);
+            if (subs && subs.length) {
+                grouped.push(...subs);
+                subsByParent.delete(todo.id);
+            }
+        });
+
+        // Any remaining sub-items whose parent isn't due this day
+        subsByParent.forEach((remSubs) => {
+            if (remSubs.length > 0) {
+                const parentTodo = remSubs[0].todo;
+                // Insert the parent main task (even if not due this day) before its sub-items
+                grouped.push({
+                    type: 'todo',
+                    id: parentTodo.id,
+                    text: parentTodo.text,
+                    completed: parentTodo.completed,
+                    dueDate: parentTodo.dueDate,
+                    todo: parentTodo
+                });
+                grouped.push(...remSubs);
+            }
+        });
+
+        return grouped;
     };
 
     // Format date for display
@@ -74,13 +181,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         });
     };
 
-    // Helper function to get all todos for a specific date
-    const getTodosForDate = (dateString: string): Todo[] => {
-        return todos.filter(todo => {
-            if (!todo.dueDate) return false;
-            return todo.dueDate === dateString;
-        });
-    };
+    // (Deprecated) Previously used to retrieve only parent todos for a date
 
     // Generate calendar days
     const generateCalendarDays = (): CalendarDay[] => {
@@ -98,7 +199,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 date,
                 dateString,
                 isCurrentMonth: false,
-                todos: getTodosForDate(dateString)
+                items: getItemsForDate(dateString)
             });
         }
 
@@ -110,7 +211,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 date,
                 dateString,
                 isCurrentMonth: true,
-                todos: getTodosForDate(dateString)
+                items: getItemsForDate(dateString)
             });
         }
 
@@ -123,7 +224,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 date,
                 dateString,
                 isCurrentMonth: false,
-                todos: getTodosForDate(dateString)
+                items: getItemsForDate(dateString)
             });
         }
 
@@ -187,7 +288,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 <div style={styles.calendarGrid}>
                     {calendarDays.map((calendarDay, index) => {
                         const isToday = calendarDay.dateString === new Date().toISOString().split('T')[0];
-                        const hasTodos = calendarDay.todos.length > 0;
+                        const hasItems = calendarDay.items.length > 0;
 
                         return (
                             <div
@@ -196,7 +297,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                                     ...styles.calendarDay,
                                     ...(calendarDay.isCurrentMonth ? {} : styles.otherMonthDay),
                                     ...(isToday ? styles.todayDay : {}),
-                                    ...(hasTodos ? styles.dayWithTodos : {}),
+                                    ...(hasItems ? styles.dayWithTodos : {}),
                                     ...(selectedDate === calendarDay.dateString ? styles.selectedDay : {})
                                 }}
                                 onClick={() => handleDateClick(calendarDay.dateString)}
@@ -205,47 +306,69 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                                     {calendarDay.date.getDate()}
                                 </div>
 
-                                {calendarDay.todos.length > 0 && (
+                                {calendarDay.items.length > 0 && (
                                     <div style={styles.todosContainer}>
-                                        {calendarDay.todos.map(todo => (
+                                        {calendarDay.items.map(item => (
                                             <div
-                                                key={todo.id}
+                                                key={`${item.type}-${item.id}`}
                                                 style={{
                                                     ...styles.todoItem,
-                                                    ...(todo.completed ? styles.completedTodo : {}),
-                                                    ...(isOverdue(todo.dueDate) && !todo.completed ? styles.overdueTodo : {}),
-                                                    ...(selectedTodoId === todo.id ? styles.selectedTodo : {})
+                                                    ...(item.completed ? styles.completedTodo : {}),
+                                                    ...(isOverdue(item.dueDate) && !item.completed ? styles.overdueTodo : {}),
+                                                    ...(item.type === 'todo' && selectedTodoId === item.id ? styles.selectedTodo : {}),
+                                                    ...(item.type === 'subitem' ? { marginLeft: '10px', fontSize: '11px' } : {}),
+                                                    ...(item.isInvalidDueDate ? { borderLeft: '3px solid red' } : {})
                                                 }}
-                                                onClick={() => onSelectTodo(todo.id)}
-                                                title={todo.text}
+                                                onClick={() => {
+                                                    if (item.type === 'todo') {
+                                                        onSelectTodo(item.id);
+                                                    } else {
+                                                        onSelectTodo(item.todo.id);
+                                                    }
+                                                }}
+                                                title={item.type === 'subitem' ? `Sub-item of "${item.todo.text}": ${item.text}` : item.text}
                                             >
                                                 <input
                                                     type="checkbox"
-                                                    checked={todo.completed}
+                                                    checked={item.completed}
                                                     onChange={(e) => {
                                                         e.stopPropagation();
-                                                        onToggleTodo(todo.id);
+                                                        if (item.type === 'todo') {
+                                                            onToggleTodo(item.id);
+                                                        } else if (item.type === 'subitem' && item.subItem) {
+                                                            onToggleSubItem(item.todo.id, item.subItem.id);
+                                                        }
                                                     }}
                                                     style={styles.checkbox}
                                                 />
                                                 <span style={styles.todoText}>
-                                                    {todo.text.length > 20 ? `${todo.text.substring(0, 20)}...` : todo.text}
+                                                    {item.type === 'subitem' ? `↳ ` : ''}
+                                                    {item.text.length > 20 ? `${item.text.substring(0, 20)}...` : item.text}
+                                                    {item.isInvalidDueDate && <span style={{ color: 'red' }}> ⚠️</span>}
                                                 </span>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onDeleteTodo(todo.id);
-                                                    }}
-                                                    style={styles.deleteButton}
-                                                    title="Delete todo"
-                                                >
-                                                    ✕
-                                                </button>
+                                                {item.type === 'subitem' && (
+                                                    <span style={styles.subItemBadge} title="Sub-item">🔗</span>
+                                                )}
+                                                {item.type === 'todo' && (
+                                                    <span style={styles.mainItemBadge} title="Main task">⭐</span>
+                                                )}
+                                                {item.type === 'todo' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onDeleteTodo(item.id);
+                                                        }}
+                                                        style={styles.deleteButton}
+                                                        title="Delete todo"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
-                                        {calendarDay.todos.length > 3 && (
+                                        {calendarDay.items.length > 3 && (
                                             <div style={styles.moreTodos}>
-                                                +{calendarDay.todos.length - 3} more
+                                                +{calendarDay.items.length - 3} more
                                             </div>
                                         )}
                                     </div>
@@ -272,75 +395,72 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                         </div>
 
                         <div style={styles.sidebarContent}>
-                            {getSelectedDateTodos().length > 0 ? (
+                            {getSelectedDateItems().length > 0 ? (
                                 <div>
                                     <h4 style={styles.sectionTitle}>
-                                        Tasks for this day ({getSelectedDateTodos().length})
+                                        Items for this day ({getSelectedDateItemsGrouped().length})
                                     </h4>
                                     <div style={styles.todosList}>
-                                        {getSelectedDateTodos().map(todo => (
+                                        {getSelectedDateItemsGrouped().map(item => (
                                             <div
-                                                key={todo.id}
+                                                key={`${item.type}-${item.id}`}
                                                 style={{
                                                     ...styles.sidebarTodoItem,
-                                                    ...(todo.completed ? styles.completedSidebarTodo : {}),
-                                                    ...(isOverdue(todo.dueDate) && !todo.completed ? styles.overdueSidebarTodo : {}),
-                                                    ...(selectedTodoId === todo.id ? styles.selectedSidebarTodo : {})
+                                                    ...(item.completed ? styles.completedSidebarTodo : {}),
+                                                    ...(isOverdue(item.dueDate) && !item.completed ? styles.overdueSidebarTodo : {}),
+                                                    ...(item.type === 'todo' && selectedTodoId === item.id ? styles.selectedSidebarTodo : {}),
+                                                    ...(item.type === 'subitem' ? styles.sidebarSubItemCard : {}),
+                                                    ...(item.isInvalidDueDate ? { borderLeft: '3px solid red' } : {}),
+                                                    // Muted style for parent tasks shown as context (not due today)
+                                                    ...(item.type === 'todo' && selectedDate && item.dueDate !== selectedDate ? styles.contextParentMuted : {})
                                                 }}
-                                                onClick={() => onSelectTodo(todo.id)}
+                                                onClick={() => {
+                                                    if (item.type === 'todo') {
+                                                        onSelectTodo(item.id);
+                                                    } else {
+                                                        onSelectTodo(item.todo.id);
+                                                    }
+                                                }}
+                                                title={item.type === 'subitem' ? `Sub-item of "${item.todo.text}": ${item.text}` : item.text}
                                             >
                                                 <div style={styles.sidebarTodoHeader}>
                                                     <input
                                                         type="checkbox"
-                                                        checked={todo.completed}
+                                                        checked={item.completed}
                                                         onChange={(e) => {
                                                             e.stopPropagation();
-                                                            onToggleTodo(todo.id);
+                                                            if (item.type === 'todo') {
+                                                                onToggleTodo(item.id);
+                                                            } else if (item.type === 'subitem' && item.subItem) {
+                                                                onToggleSubItem(item.todo.id, item.subItem.id);
+                                                            }
                                                         }}
                                                         style={styles.sidebarCheckbox}
                                                     />
                                                     <span style={styles.sidebarTodoText}>
-                                                        {todo.text}
+                                                        {item.type === 'subitem' ? `↳ ${item.text}` : item.text}
+                                                        {item.isInvalidDueDate && <span style={{ color: 'red' }}> ⚠️</span>}
                                                     </span>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onDeleteTodo(todo.id);
-                                                        }}
-                                                        style={styles.sidebarDeleteButton}
-                                                        title="Delete task"
-                                                    >
-                                                        🗑️
-                                                    </button>
+                                                    {item.type === 'subitem' && (
+                                                        <span style={styles.subItemBadge} title="Sub-item">🔗</span>
+                                                    )}
+                                                    {item.type === 'todo' && (
+                                                        <span style={styles.mainItemBadge} title="Main task">⭐</span>
+                                                    )}
+                                                    {item.type === 'todo' && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onDeleteTodo(item.id);
+                                                            }}
+                                                            style={styles.sidebarDeleteButton}
+                                                            title="Delete task"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    )}
                                                 </div>
-
-                                                {/* Show sub-items if any */}
-                                                {todo.subItems && todo.subItems.length > 0 && (
-                                                    <div style={styles.subItemsSection}>
-                                                        <div style={styles.subItemsTitle}>
-                                                            Sub-items ({todo.subItems.length})
-                                                        </div>
-                                                        {todo.subItems.map(subItem => (
-                                                            <div
-                                                                key={subItem.id}
-                                                                style={{
-                                                                    ...styles.sidebarSubItem,
-                                                                    ...(subItem.completed ? styles.completedSidebarTodo : {})
-                                                                }}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={subItem.completed}
-                                                                    readOnly
-                                                                    style={styles.sidebarCheckbox}
-                                                                />
-                                                                <span style={styles.sidebarSubItemText}>
-                                                                    {subItem.text}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                {/* Sub-item parent hint removed for cleaner UI; using small badge instead */}
                                             </div>
                                         ))}
                                     </div>
@@ -533,6 +653,28 @@ const styles = {
         textAlign: 'center' as const,
         padding: '2px',
     },
+    subItemBadge: {
+        fontSize: '10px',
+        color: '#9ca3af',
+        backgroundColor: '#374151',
+        padding: '1px 4px',
+        borderRadius: '8px',
+        marginLeft: '6px',
+        flexShrink: 0,
+    },
+    mainItemBadge: {
+        fontSize: '10px',
+        color: '#fbbf24',
+        backgroundColor: '#4b3f1a',
+        padding: '1px 4px',
+        borderRadius: '8px',
+        marginLeft: '6px',
+        flexShrink: 0,
+    },
+    contextParentMuted: {
+        opacity: 0.6,
+        backgroundColor: '#1f2937',
+    },
     // Selected day style
     selectedDay: {
         backgroundColor: '#61dafb15',
@@ -667,6 +809,14 @@ const styles = {
         gap: '8px',
         padding: '5px 0',
         marginLeft: '10px',
+    },
+    sidebarSubItemCard: {
+        marginLeft: '28px',
+        width: 'calc(100% - 28px)',
+        fontSize: '12px',
+        padding: '10px 12px',
+        backgroundColor: '#242830',
+        borderLeft: '3px solid #374151',
     },
     sidebarSubItemText: {
         color: '#ccc',
