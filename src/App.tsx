@@ -3,7 +3,6 @@ import { useTodos } from './hooks/useTodos';
 import { useSelectedTodo } from './hooks/useSelectedTodo';
 import { useAuth } from './hooks/useAuth';
 import { ErrorMessage } from './components/ErrorMessage';
-import { TodoInput } from './components/TodoInput';
 import { TaskTableView } from './components/TaskTableView';
 import { LoadingState } from './components/LoadingState';
 import { LoginPage } from './components/LoginPage';
@@ -17,7 +16,6 @@ function App() {
         todos,
         loading,
         error,
-        addTodo,
         updateTodo,
         deleteTodo,
         clearError
@@ -79,10 +77,7 @@ function App() {
                     {isMobile() ? '📱 Local Storage' : '☁️ Firebase'}
                 </div>
 
-                <TodoInput
-                    onAddTodo={addTodo}
-                    loading={loading}
-                />
+                {/* Top-level add input removed per request */}
 
                 {loading ? (
                     <LoadingState />
